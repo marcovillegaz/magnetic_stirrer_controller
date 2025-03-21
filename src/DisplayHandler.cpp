@@ -1,66 +1,49 @@
 #include "DisplayHandler.h"
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include <Arduino.h>
 
-// Why this are defining here?
-// LCD Setup (Adjust address if needed)
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// Constructor: Initializes LCD with I2C address, columns, and rows
+DisplayHandler::DisplayHandler(uint8_t address, uint8_t cols, uint8_t rows)
+    : lcd(address, cols, rows) {}
 
-void setupDisplay()
+void DisplayHandler::begin()
 {
     lcd.init();
     lcd.backlight();
-
-    // Display initialization message for debugging
-    Serial.println("Display initialized");
-
-    // Display startup message
     lcd.setCursor(0, 0);
-    lcd.print("MAGNETIC");
+    lcd.print("RPM Control");
     lcd.setCursor(0, 1);
-    lcd.print("STIRRER v1.0");
-    delay(5000);
+    lcd.print("version 2.1.0");
+    delay(2000);
+    updateScreen();
 }
 
-// Set mode inteface
-void set_mode()
+// Update LCD Display
+void DisplayHandler::updateScreen()
 {
+    SystemState &state = SystemState::getInstance();
+
     lcd.clear();
 
-    if (currentOption == 0) // T1
+    if (state.mode == SHOW_RPM)
     {
         lcd.setCursor(0, 0);
-        lcd.print("Set T1:");
-        lcd.setCursor(5, 1);
-        lcd.print(set_T1);
+        lcd.print(state.currentOption == MOTOR1 ? ">M1:" : " M1:");
+        lcd.setCursor(6, 0);
+        lcd.print(state.rpm[MOTOR1], 1);
+        lcd.print(" RPM");
+
+        lcd.setCursor(0, 1);
+        lcd.print(state.currentOption == MOTOR2 ? ">M2:" : " M2:");
+        lcd.setCursor(6, 1);
+        lcd.print(state.rpm[MOTOR2], 1);
+        lcd.print(" RPM");
     }
-    else // T2
+    else if (state.mode == SET_RPM)
     {
         lcd.setCursor(0, 0);
-        lcd.print("Set T2:");
-        lcd.setCursor(5, 1);
-        lcd.print(set_T2);
+        lcd.print("Set RPM:");
+
+        lcd.setCursor(0, 1);
+        lcd.print(state.rpm[state.currentOption]);
     }
-}
-
-// Update display. This update the temperature values and the position of the cursor
-void updateDisplay()
-{
-    lcd.clear();
-
-    // First row - T1
-    lcd.setCursor(0, 0);
-    lcd.print(currentOption == 0 ? ">T1:" : " T1:");
-    lcd.setCursor(5, 0);
-    lcd.print(set_T1, 1); // In future chenge value with the sensor one
-    lcd.print((char)223);
-    lcd.print("C");
-
-    // Second row - T2
-    lcd.setCursor(0, 1);
-    lcd.print(currentOption == 1 ? ">T2:" : " T2:");
-    lcd.setCursor(5, 1);
-    lcd.print(set_T2, 1);
-    lcd.print((char)223);
-    lcd.print("C");
 }
