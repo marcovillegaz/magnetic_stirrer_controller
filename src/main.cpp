@@ -1,69 +1,23 @@
-// #include <Arduino.h> included in other files
 #include "DisplayHandler.h"
 #include "EncoderHandler.h"
-#include "PIDHandler.h"
 
-unsigned long previousTemperatureMillis = 0; // To track temperature update time
-unsigned long previousEncoderMillis = 0;     // To track encoder update time
-unsigned long previousPIDMillis = 0;         // To track PID control time
+#define ENCODER_CLK 2
+#define ENCODER_DT 3
+#define ENCODER_SW 4
 
-const long temperatureInterval = 2000; // Interval for temperature update (1000ms)
-const long encoderInterval = 100;      // Interval for encoder update (100ms)
-const long pidInterval = 500;          // Interval for PID updates (ms)
+DisplayHandler display(0x27, 16, 2);
+EncoderHandler encoder(ENCODER_CLK, ENCODER_DT, ENCODER_SW, &display);
 
 void setup()
 {
-  // Initialize Serial Monitor for debugging
-  Serial.begin(9600);
-  Serial.println("System Initialized");
-
-  setupDisplay();
-  setupEncoder();
-  setupPID();
-
-  updateDisplay(); // Initial display update
+  // Initialize the display and encoder
+  display.begin();
+  encoder.begin();
 }
 
 void loop()
 {
-  unsigned long currentMillis = millis(); // Get the current time
-
-  // Handle encoder every 100ms
-  if (currentMillis - previousEncoderMillis >= encoderInterval)
-  {
-    previousEncoderMillis = currentMillis;
-    handleEncoder(); // Handle encoder inputs and update the display
-  }
-
-  // Update temperature every 1000ms
-  if (currentMillis - previousTemperatureMillis >= temperatureInterval)
-  {
-    previousTemperatureMillis = currentMillis;
-    if (!setMode)
-    { // Only update temperatures when not in setMode
-      // readTemperatures(); // Read temperatures from the sensors
-      updateDisplay(); // Update the display with new temperature values
-    }
-  }
-
-  // Perform PID control every 500ms
-  if (currentMillis - previousPIDMillis >= pidInterval)
-  {
-    previousPIDMillis = currentMillis;
-
-    // Set PID inputs from current temperatures
-    // setPIDInput(T1, T2); // Introduces the lecture from the thermocouples to the PID
-
-    // Update PID calculations
-    // updatePID();
-
-    // Control relays based on PID outputs
-    // controlRelayT1(getPIDOutputT1());
-    // controlRelayT2(getPIDOutputT2());
-  }
-
-  // Add other logic for button presses or other actions if needed
-  // For example: handle button press, toggle modes, etc.
-
-  delay(10); // Optional delay, small delay to reduce CPU load
+  // Update the encoder
+  encoder.update();
+  delay(100); // Adds a short delay to allow the display to update
 }
