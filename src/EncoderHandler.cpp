@@ -1,78 +1,57 @@
 #include "EncoderHandler.h"
-#include "DisplayHandler.h" // Now calls updateDisplay() from here
+#include <Arduino.h>
 
-// Why this are defining here?
-Encoder myEnc(ENCODER_PIN_A, ENCODER_PIN_B); // Encoder object
+// Constructor: Initializes encoder and button
+EncoderHandler::EncoderHandler(uint8_t clk, uint8_t dt, uint8_t sw, DisplayHandler *disp)
+    : encoder(clk, dt), buttonPin(sw), display(disp), lastPosition(0) {}
 
-// Variables for encoder handling
-int lastEncoderPosition = -1; // Last encoder position
-bool buttonPressed = false;   // Button press flag
-bool setMode = false;         // Set mode flag
-int currentOption = 0;        // 0 for T1, 1 for T2
-
-// Predefined temperature set points
-double set_T1 = 25; // Default set point for T1
-double set_T2 = 25; // Default set point for T2
-
-void setupEncoder()
+void EncoderHandler::begin()
 {
-    pinMode(ENCODER_BUTTON_PIN, INPUT_PULLUP); // Enable pull-up resistor
-    lastEncoderPosition = myEnc.read() / 4;    // Initialize encoder position
+    pinMode(buttonPin, INPUT_PULLUP);
 }
 
-// This could be atomized into smaller functions?
-void handleEncoder()
+// Read encoder and update display
+void EncoderHandler::update()
 {
-    int newEncoderPosition = myEnc.read() / 4; // Reduce resolution to 90 degrees
+    // The display will be updated only if the encoder is rotated or pressed
 
-    // Serial print encoder position for debugging
-    // Serial.print("Encoder: ");
-    // Serial.println(newEncoderPosition);
+    SystemState &state = SystemState::getInstance();
 
-    // Handle encoder rotation
-    if (newEncoderPosition != lastEncoderPosition)
+    int newPosition = encoder.read() / 4; // Encoder reading
+
+    if (newPosition < lastPosition)
     {
-        if (setMode) // Set mode enabled
+        // If in SHOW_RPM mode, switch between motors
+        if (state.mode == SHOW_RPM)
+            state.currentOption = (state.currentOption == MOTOR1) ? MOTOR2 : MOTOR1;
+        // If in SET_RPM mode, increase RPM value
+        else if (state.mode == SET_RPM)
         {
-            if (currentOption == 0)
-            { // Set T1
-                set_T1 += (newEncoderPosition > lastEncoderPosition) ? -TEMP_STEP : TEMP_STEP;
-            }
-            else
-            { // Set T2
-                set_T2 += (newEncoderPosition > lastEncoderPosition) ? -TEMP_STEP : TEMP_STEP;
-            }
-            set_mode(); // Call display update from DisplayHandler
+            state.rpm[state.currentOption] += 10;
         }
-        else
-        { // Normal mode, change between rows
-            currentOption = (newEncoderPosition > lastEncoderPosition) ? 1 : 0;
-            updateDisplay(); // Call display update from DisplayHandler
+        display->updateScreen();
+    }
+    // If encoder rotated in the opposite direction
+    else if (newPosition > lastPosition)
+    {
+        // If in SHOW_RPM mode, switch between motors
+        if (state.mode == SHOW_RPM)
+            state.currentOption = (state.currentOption == MOTOR1) ? MOTOR2 : MOTOR1;
+        // If in SET_RPM mode, decrease RPM value
+        else if (state.rpm[state.currentOption] > 0) // Condition to avoid negative values
+        {
+            state.rpm[state.currentOption] -= 10;
         }
-
-        lastEncoderPosition = newEncoderPosition;
+        display->updateScreen();
     }
 
-    // Handle button press
-    if (digitalRead(ENCODER_BUTTON_PIN) == LOW)
-    {
-        if (!buttonPressed) // Check if button was not pressed before
-        {
-            buttonPressed = true;
-            setMode = !setMode;
+    lastPosition = newPosition;
+    // display->updateScreen();
 
-            if (!setMode)
-            {
-                updateDisplay(); // Exit set mode, refresh screen
-            }
-            else
-            {
-                set_mode(); // Enter set mode
-            }
-        }
-    }
-    else
+    if (digitalRead(buttonPin) == LOW)
     {
-        buttonPressed = false; // Reset button press flag
+        delay(200);
+        state.mode = (state.mode == SHOW_RPM) ? SET_RPM : SHOW_RPM;
+        display->updateScreen();
     }
 }

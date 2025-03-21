@@ -1,25 +1,24 @@
-#ifndef ENCODER_HANDLER_H
-#define ENCODER_HANDLER_H
+#ifndef ENCODERHANDLER_H
+#define ENCODERHANDLER_H
 
-#include <Arduino.h>
 #include <Encoder.h>
+#include "SystemState.h"
+#include "DisplayHandler.h"
 
-// Encoder pins
-#define ENCODER_PIN_A 2      // CLK
-#define ENCODER_PIN_B 3      // DT
-#define ENCODER_BUTTON_PIN 4 // SW
+// Class to handle the rotary encoder
+class EncoderHandler {
+private:
+    Encoder encoder;
+    uint8_t buttonPin;
+    DisplayHandler *display;
+    int lastPosition;
 
-#define TEMP_STEP 1 // Step size for temperature adjustment
-
-extern bool setMode;
-extern int currentOption;
-extern double set_T1, set_T2;
-
-// Function declarations
-void setupEncoder();  // Initialize encoder
-void handleEncoder(); // Read encoder state
-// bool isButtonPressed(); // Check if the button is pressed
-
-extern int selectedThermocouple; // T1 = 0, T2 = 1
+public:
+    // Constructor: Initializes encoder and button
+    EncoderHandler(uint8_t clk, uint8_t dt, uint8_t sw, DisplayHandler* disp);
+    // Function prototypes
+    void begin(); // Initializes the encoder and button
+    void update(); // Reads encoder input and updates display
+};
 
 #endif
